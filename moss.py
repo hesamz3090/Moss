@@ -1,237 +1,230 @@
-import sys
-import threading
-import time
 import re
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin, urlparse, urlunparse
 import argparse
+import time
+import csv
+import os
+import warnings
+from bs4 import XMLParsedAsHTMLWarning
+import json
+
+warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
 # Author information
-AUTHOR_NAME = "Hesam Aghjani"
+AUTHOR_NAME = "Hesam Aghajani"
 AUTHOR_CONTACT = "hesamz3090@gmail.com"
 
 # Version Information
-VERSION = "1.0.0"
+VERSION = "2.0.0"
+
+def banner():
+    print(r"""
+ __  __  ____   ____   _____ 
+|  \/  |/ __ \ / __ \ / ____|
+| \  / | |  | | |  | | (___  
+| |\/| | |  | | |  | |\___ \ 
+| |  | | |__| | |__| |____) |
+|_|  |_|\____/ \____/|_____/  v{}
+    Author: {}
+    Contact: {}
+""".format(VERSION, AUTHOR_NAME, AUTHOR_CONTACT))
 
 
 class Moss:
     """
-    A simple web crawler to fetch and classify URLs based on various patterns.
-    It checks the type of the URL (e.g., image, file, social media) and performs multi-threaded requests to gather data.
+    Web Crawler and Link Type Analyzer.
+    Designed for passive link mapping and basic categorization of site resources.
     """
 
-    def check_type(self, url_list: list, hostname: str):
+    def __init__(self, url, timeout=5, live=True):
+        self.url = url
+        self.hostname = urlparse(self.url).hostname
+        self.timeout = timeout
+        self.live = live
+        self.level = 1
+
+    def get_data(self, url_list):
         """
-        Classifies URLs based on predefined patterns.
-        :param hostname: The hostname of the base URL.
-        :param url_list: List of URLs to classify.
-        :return: A list of URLs with their associated type.
+        Fetch content from a list of URLs with timeout.
         """
-        # Define patterns for different URL types
-        image_pattern = r'\.(jpg|jpeg|png|gif)$'
-        file_pattern = r'\.(pdf|docx|pptx|zip|rar|csv|xls|xlsx|txt|exe)$'
-        social_pattern = r'(t\.me|facebook\.com|twitter\.com|instagram\.com|x\.com|linkedin\.com|youtube\.com|telegram\.me|whatsapp\.com)'
-        content_pattern = r'(%)'
-        subdomain_pattern = rf'://((?!www\.).*?)\.{re.escape(hostname)}'
-
-        patterns = [
-            (file_pattern, 'FILE'),
-            (image_pattern, 'IMAGE'),
-            (content_pattern, 'CONTENT'),
-            (social_pattern, 'SOCIAL'),
-            (subdomain_pattern, 'SUBDOMAIN'),
-        ]
-
-        # Iterate over the URL list and classify
-        for data in url_list:
-            url = data['url']
-            for pattern, data_type in patterns:
-                if re.search(pattern, url):
-                    data['type'] = data_type
-                    break
-            else:
-                if hostname in url:
-                    data['type'] = 'DIRECTORY'
-                else:
-                    data['type'] = 'EXTRA'
-
-        return url_list
-
-    def check_url(self, url_list: list):
-        """
-        Perform multi-threaded requests to check URLs and gather information.
-        :param url_list: List of URLs to check.
-        :return: A list of dictionaries containing information about each URL.
-        """
-        thread_list = []
-        result_list = []
-        result_lock = threading.Lock()
-
-        def get_request(url, result):
+        request_list = []
+        for idx, url in enumerate(url_list, start=1):
             try:
-                # Send GET request to the URL
-                response = requests.get(url)
-                with result_lock:
-                    url_data = {
-                        'hostname': response.url.split('/')[2],
-                        'url': response.url,
-                        'content_length': len(response.text),
-                        'status_code': response.status_code,
-                    }
-                    result.append(url_data)
+                response = requests.get(url, timeout=self.timeout)
+                response.encoding = response.apparent_encoding
+                url_type = self.get_type(url)
+                if self.live:
+                    print(
+                        f"[Level {self.level}] [{idx}/{len(url_list)}] Crawling: {response.url} [{response.status_code}] [{url_type}]")
+                request_list.append({
+                    'url': response.url,
+                    'content_length': len(response.content),
+                    'status_code': response.status_code,
+                    'type': url_type,
+                    'html': response.text,
+                })
             except requests.RequestException:
                 pass
+        return request_list
 
-        # Create and start threads for each URL
-        for item in url_list:
-            thread = threading.Thread(target=get_request, args=(item, result_list))
-            thread_list.append(thread)
-            thread.start()
-
-        # Wait for all threads to complete
-        for thread in thread_list:
-            thread.join()
-
-        return result_list
-
-    def clean_dict_list(self, unclean_dict: list):
+    def extract_links(self, page_list):
         """
-        Cleans the URL list by removing duplicates based on the URL.
-        :param unclean_dict: List of dictionaries containing URL data.
-        :return: A list of unique URLs.
+        Extract all valid anchor href links from the HTML pages.
         """
-        unique_hostnames = set()
-        result = []
-
-        # Remove duplicates
-        for item in unclean_dict:
-            url = item.get('url')
-            if url not in unique_hostnames:
-                unique_hostnames.add(url)
-                result.append(item)
-
-        return result
-
-    def __init__(self, url: str, depth: int = 1):
-        """
-        Initializes the Moss crawler with the given URL and depth.
-        :param url: The base URL to start crawling from.
-        :param depth: The maximum depth to crawl (default is 1).
-        """
-        self.url = url
-        self.hostname = urlparse(url).hostname
-        self.depth = depth
-
-        self.result = {
-            "result": [],
-            'status': 'WORKING',
-            'spend_time': 0,
-        }
-
-    def crawl(self):
-        """
-        Crawls the web starting from the base URL, following links up to the specified depth.
-        :return: A list of visited URLs.
-        """
-        visited = set()
-        not_visited = set()
-        not_visited.add((self.url, 0))
-
-        # Perform the crawl by visiting URLs and following links
-        while not_visited:
-            current_url, current_depth = not_visited.pop()
-            visited.add(current_url)
-
-            if self.depth == 0 or current_depth < self.depth:
-                links = self.get_links(current_url)
-                new_links = links - visited - {url for url, _ in not_visited}
-
-                for link in new_links:
-                    if self.hostname in link:
-                        not_visited.add((link, current_depth + 1))
-                    else:
-                        visited.add(link)
-        return list(set(visited))
-
-    def get_links(self, url):
-        """
-        Fetches all the links from the given URL.
-        :param url: The URL to fetch links from.
-        :return: A set of unique links found on the page.
-        """
-        links = set()
-        try:
-            response = requests.get(url, timeout=2)
-            response.encoding = response.apparent_encoding
-            soup = BeautifulSoup(response.text, 'html.parser')
-
+        link_list = set()
+        for page in page_list:
+            html = page['html']
+            soup = BeautifulSoup(html, 'html.parser')
             for anchor in soup.find_all('a', href=True):
                 link = anchor['href']
-                if len(link) > 1:
+                if not link or link.startswith('#') or link == '/' or link == 'javascript:void(0)':
+                    continue
+                if 'http' not in link:
                     link = urljoin(self.url, link)
-                    if '#' not in link:
-                        links.add(link)
-            return links
-        except requests.RequestException:
-            return set()
+                parsed = urlparse(link)
+                normalized = urlunparse((parsed.scheme, parsed.netloc, parsed.path.rstrip('/'), '', '', ''))
+                link_list.add(normalized)
+        return link_list
+
+    def get_type(self, url):
+        """
+        Categorize the URL based on patterns (email, image, social media, etc.).
+        """
+        internal_pattern = rf'://(www\.)?{re.escape(self.hostname)}'
+        external_pattern = r'^(http|https)://'
+        email_pattern = r'^mailto:'
+        telephone_pattern = r'^tel:'
+        social_pattern = r'(facebook\.com|twitter\.com|instagram\.com|x\.com|linkedin\.com|youtube\.com|telegram\.me|whatsapp\.com)'
+        image_pattern = r'\.(jpg|jpeg|png|gif|bmp|webp)$'
+        video_pattern = r'\.(mp4|avi|mov|mkv)$'
+        audio_pattern = r'\.(mp3|wav|flac)$'
+        download_pattern = r'\.(pdf|docx|pptx|xls|xlsx|txt|exe|doc)$'
+        archive_pattern = r'\.(zip|tar|rar|gz|7z)$'
+        font_pattern = r'\.(woff|woff2|ttf|otf)$'
+        config_pattern = r'\.(json|xml|yaml|ini|conf)$'
+        data_pattern = r'\.(csv|json)$'
+        database_pattern = r'\.(db|sqlite|sql)$'
+        frontend_pattern = r'\.(html|css|js)$'
+        api_pattern = r'/api/'
+
+        patterns = [
+            (download_pattern, 'DOWNLOAD'),
+            (email_pattern, 'EMAIL'),
+            (telephone_pattern, 'TELEPHONE'),
+            (social_pattern, 'SOCIAL'),
+            (api_pattern, 'API'),
+            (frontend_pattern, 'FRONTEND'),
+            (image_pattern, 'IMAGE'),
+            (video_pattern, 'VIDEO'),
+            (audio_pattern, 'AUDIO'),
+            (font_pattern, 'FONT'),
+            (config_pattern, 'CONFIG'),
+            (data_pattern, 'DATA'),
+            (archive_pattern, 'ARCHIVE'),
+            (database_pattern, 'DATABASE'),
+            (internal_pattern, 'INTERNAL'),
+            (external_pattern, 'EXTERNAL'),
+        ]
+
+        for pattern, data_type in patterns:
+            if re.search(pattern, url):
+                return data_type
+        return 'EXTERNAL'
 
     def run(self):
         """
-        Runs the crawler and processes the URLs.
-        :return: A dictionary containing the results of the crawl.
+        Run the crawling and return collected page info.
         """
-        try:
-            start_time = time.time()
-            link_list = self.crawl()
-            checked_link = self.check_url(link_list)
-            unclean_list = self.check_type(checked_link, self.hostname)
-            result = self.clean_dict_list(unclean_list)
+        result_list = []
+        crawl_list = [self.url]
+        visited_set = set()
 
-            self.result['result'] = result
-            self.result['spend_time'] = int(time.time() - start_time)
-            self.result['status'] = 'COMPLETED'
-            return self.result
+        while crawl_list:
+            data_list = self.get_data(crawl_list)
 
-        except Exception as error:
-            error_type, error_name, error_traceback = sys.exc_info()
-            error_file = error_traceback.tb_frame.f_code.co_filename
-            error_line = error_traceback.tb_lineno
-            self.result = {
-                'status': 'ERROR',
-                'error': {
-                    'file': str(error_file),
-                    'line': str(error_line),
-                    'error': str(error),
-                }
-            }
-            return self.result
+            result_list.extend(data_list)
+            visited_set.update(crawl_list)
+            crawl_list.clear()
 
+            link_list = self.extract_links(data_list)
 
-def main():
-    """
-    Main function to parse arguments and run the crawler.
-    """
-    # Parse command-line arguments
-    parser = argparse.ArgumentParser(description='Moss Web Crawler')
-    parser.add_argument('url', help='The base URL to start crawling from')
-    parser.add_argument('--depth', type=int, default=1, help='The depth of the crawl (default is 1)')
-    parser.add_argument('-v', '--version', action='version', version=VERSION, help="Show the version of the crawler")
-    args = parser.parse_args()
+            external_list = []
+            new_link = 0
+            for link in link_list:
+                url_type = self.get_type(link)
+                if url_type == 'INTERNAL':
+                    if link not in crawl_list and link not in visited_set:
+                        crawl_list.append(link)
+                        new_link += 1
+                else:
+                    if link not in visited_set and link not in external_list:
+                        external_list.append(link)
+                        visited_set.add(link)
+                        new_link += 1
 
-    # Initialize the crawler and run it
-    crawler = Moss(args.url, depth=args.depth)
-    result = crawler.run()
+            result_list.extend(self.get_data(external_list))
 
-    # Print the results
-    if result['status'] == 'COMPLETED':
-        print(f"\nCrawl completed in {result['spend_time']} seconds.")
-        print(f"Found {len(result['result'])} unique URLs :")
-        for url in result['result']:
-            print(url['url'])
-    else:
-        print(f"\nAn error occurred: {result['error']}")
+            print(
+                f'[+] Level {self.level} | Scanned: {len(result_list)} URLs | New Links: {new_link} | Queue: {len(crawl_list)}')
+            self.level += 1
+        return result_list
 
 
 if __name__ == '__main__':
-    main()
+    """
+    Entry point when running as CLI tool.
+    """
+    parser = argparse.ArgumentParser(description='Moss Web Crawler by Hesam Aghajani')
+    parser.add_argument('url', help='The base URL to start crawling from')
+    parser.add_argument('--timeout', type=int, default=5, help='Timeout for each request (default=5)')
+    parser.add_argument('--live', action='store_true', default=True,
+                        help='Show live crawling output (default: enabled)')
+    parser.add_argument('--format', choices=['csv', 'json'], default='csv',
+                        help='Output format: csv or json (default: csv)')
+    parser.add_argument('--output', type=str, help='Output directory path (default: current folder)')
+    parser.add_argument('-v', '--version', action='version', version=f'%(prog)s {VERSION}')
+
+    args = parser.parse_args()
+
+    banner()
+
+    if not args.url.startswith(('http://', 'https://')):
+        print("[!] Error: URL must start with http:// or https:// (we can't assume SSL).")
+        exit()
+    start_time = time.time()
+
+    crawler = Moss(args.url, timeout=args.timeout, live=args.live)
+    result = crawler.run()
+
+    end_time = time.time()
+    duration = end_time - start_time
+
+    print(f"\n[*] Crawl finished. Total URLs scanned: {len(result)}")
+    print(f"Time taken: {duration:.2f} seconds\n")
+
+    base_name = f'moss_result_{urlparse(args.url).hostname}'
+    output_dir = args.output or os.getcwd()
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    if args.format == 'csv':
+        csv_path = os.path.join(output_dir, base_name + '.csv')
+        with open(csv_path, mode='w', newline='', encoding='utf-8') as file:
+            writer = csv.DictWriter(file, fieldnames=['url', 'status_code', 'content_length', 'type'])
+            writer.writeheader()
+            for item in result:
+                writer.writerow({
+                    'url': item['url'],
+                    'status_code': item['status_code'],
+                    'content_length': item['content_length'],
+                    'type': item['type']
+                })
+        print(f"[✓] CSV saved to: {csv_path}")
+
+    elif args.format == 'json':
+        json_path = os.path.join(output_dir, base_name + '.json')
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+        print(f"[✓] JSON saved to: {json_path}")

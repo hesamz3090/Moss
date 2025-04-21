@@ -33,18 +33,26 @@ sudo pip install .
 
 ## Usage
 
-| Short Form | Long Form   | Description                                      |
-|------------|-------------|--------------------------------------------------|
-| -u         | --url       | The base URL to start crawling from              |
-| -d         | --depth     | The depth to which the crawler should follow links |
-| -v         | --version   | Show program's version number and exit           |
-| -h         | --help      | Show this help message and exit                  |
+| Argument  | Type | Default     | Description                                                                      |
+|-----------|------|-------------|----------------------------------------------------------------------------------|
+| url       | str  | Required    | The base URL to start crawling from. Must start with http:// or https://.        |
+| --timeout | int  | 5           | Timeout in seconds for each HTTP request.                                        |
+|
+| --live    | flag | True        | If enabled, prints real-time logs during crawling.                               |
+|
+| --format  | str  | csv         | Output format: either 'csv' or 'json'.                                           |
+|
+| --output  | str  | current dir | Directory path to save the output. If not provided, saves in the current folder. |
+|
+| -v        | flag | —           | Displays the current version of the tool.                                        |
+|
 
 ### Examples
 
 * To crawl a single URL up to a specified depth:
 ```bash
-moss --url "http://example.com" --depth 3
+moss "http://example.com"
+moss python moss.py https://example.com --format json --output ./results
 ```
 
 ## Using Moss Crawler as a Module in Your Python Scripts
@@ -53,20 +61,22 @@ You can also use the Moss Crawler functionality directly in your Python scripts.
 
 ### Example:
 ```python
-import moss
-response_list = moss.main("http://example.com", 2)
+from moss import Moss
+obg = Moss("http://example.com")
+response_list = obg.run()
 ```
 
 The `main` function will return a list of unique responses, classified by URL type.
 
-### Function Usage:
-* **urls**: List of URLs to start crawling from (can be a file or a list of URLs).
-* **depth**: The depth to which the crawler should follow links.
+### Function Arguments:
+* **urls**: str
+* **timeout**: int
+* **live**: bool
 
 ## License
 
-Moss Moss is licensed under the MIT License. See the [LICENSE](https://github.com/hesamz3090/moss/blob/main/LICENSE) for more information.
+Moss is licensed under the MIT License. See the [LICENSE](https://github.com/hesamz3090/moss/blob/main/LICENSE) for more information.
 
 ## Version
 
-**Current version is 1.0**
+**Current version is 2.0**

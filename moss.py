@@ -14,12 +14,13 @@ class Moss:
     Designed for passive link mapping and basic categorization of site resources.
     """
 
-    def __init__(self, url, timeout=5, live=True):
+    def __init__(self, url, max_depth=None, timeout=5, live=True):
         self.url = url
         self.hostname = urlparse(self.url).hostname
         self.timeout = timeout
         self.live = live
-        self.level = 1
+        self.depth = 1
+        self.max_depth = max_depth
 
     def get_data(self, url_list):
         """
@@ -33,7 +34,7 @@ class Moss:
                 url_type = self.get_type(url)
                 if self.live:
                     print(
-                        f"[Level {self.level}] [{idx}/{len(url_list)}] Crawling: {response.url} [{response.status_code}] [{url_type}]")
+                        f"[Level {self.depth}] [{idx}/{len(url_list)}] Crawling: {response.url} [{response.status_code}] [{url_type}]")
                 request_list.append({
                     'url': response.url,
                     'content_length': len(response.content),
@@ -118,6 +119,8 @@ class Moss:
         visited_set = set()
 
         while crawl_list:
+            if self.max_depth and self.max_depth == self.depth:
+                break
             data_list = self.get_data(crawl_list)
 
             result_list.extend(data_list)
@@ -143,6 +146,6 @@ class Moss:
             result_list.extend(self.get_data(external_list))
 
             print(
-                f'[+] Level {self.level} | Scanned: {len(result_list)} URLs | New Links: {new_link} | Queue: {len(crawl_list)}')
-            self.level += 1
+                f'[+] Level {self.depth} | Scanned: {len(result_list)} URLs | New Links: {new_link} | Queue: {len(crawl_list)}')
+            self.depth += 1
         return result_list

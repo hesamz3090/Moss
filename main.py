@@ -41,6 +41,8 @@ def main():
         """
     parser = argparse.ArgumentParser(description='Moss Web Crawler by Hesam Aghajani')
     parser.add_argument('url', help='The base URL to start crawling from')
+    parser.add_argument('--max_depth', type=int, default=None, help='limit crawling depth for a fast scan ('
+                                                                    'default=None)')
     parser.add_argument('--timeout', type=int, default=5, help='Timeout for each request (default=5)')
     parser.add_argument('--live', action='store_true', default=True,
                         help='Show live crawling output (default: enabled)')
@@ -58,7 +60,7 @@ def main():
         exit()
     start_time = time.time()
 
-    crawler = Moss(args.url, timeout=args.timeout, live=args.live)
+    crawler = Moss(args.url, max_depth=args.max_depth, timeout=args.timeout, live=args.live)
     result = crawler.run()
 
     end_time = time.time()

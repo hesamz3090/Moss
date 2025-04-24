@@ -15,6 +15,7 @@
 **Moss**  is a simple web crawler built with Python that fetches a webpage, recursively follows links up to a specified depth, and classifies URLs into different categories (e.g., files, images, social links, etc.). It uses the `requests` and `BeautifulSoup` libraries for web scraping and multi-threading to speed up the crawling process.
 
 ## 📦 Features
+- #### 📌 There is no max depht
 - 📄 File Links (PDF, ZIP, etc.)
 - 🖼️ Image Links (PNG, JPG, SVG, etc.)
 - 📨 Email Links

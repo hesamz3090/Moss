@@ -1,37 +1,51 @@
+```
+     __  __  ____   ____   _____ 
+    |  \/  |/ __ \ / __ \ / ____|
+    | \  / | |  | | |  | | (___  
+    | |\/| | |  | | |  | |\___ \ 
+    | |  | | |__| | |__| |____) |
+    |_|  |_|\____/ \____/|_____/  v2.0.0
+  
+    Author : Hesam Aghajani
+    Contact: hesamz3090@gmail.com
+    Description: A simple web crawler that classifies URLs and performs
+```
 
-# Moss Crawler
+# 🕷️ Moss Crawler
+**Moss**  is a simple web crawler built with Python that fetches a webpage, recursively follows links up to a specified depth, and classifies URLs into different categories (e.g., files, images, social links, etc.). It uses the `requests` and `BeautifulSoup` libraries for web scraping and multi-threading to speed up the crawling process.
 
-A Python web crawler that follows links up to a specified depth, classifies URLs based on patterns, and performs multi-threaded requests.
+## 📦 Features
+- 📄 File Links (PDF, ZIP, etc.)
+- 🖼️ Image Links (PNG, JPG, SVG, etc.)
+- 📨 Email Links
+- 🔗 API Endpoints
+- 🌐 Social Media Links
+- 📦 Downloadable Files
+- ❓ Unknown/Other Links
+---
 
-## About Moss Crawler
+## 📌 Requirements
 
-Moss is a simple web crawler built with Python that fetches a webpage, recursively follows links up to a specified depth, and classifies URLs into different categories (e.g., files, images, social links, etc.). It uses the `requests` and `BeautifulSoup` libraries for web scraping and multi-threading to speed up the crawling process.
+- Python 3.6+
+- See `requirements.txt` for dependencies
 
-## Dependencies:
-Crawler depends on the `requests`, `beautifulsoup4` Python modules.
-These dependencies can be installed using the requirements file:
-
-## Installation
-
-To install Moss Crawler, clone the repository and install the dependencies:
+---
+## ⚙️ Installation
 
 ### Clone the repository:
 ```bash
 git clone https://github.com/hesamz3090/moss.git
 cd moss
+pip install -r requirements.txt
 ```
-
-### Installation on Windows:
-```bash
-c:\python3\python.exe -m pip install .
-```
+Or install directly using pip (after packaging):
 
 ### Installation on Linux:
 ```bash
-sudo pip install .
+pip install .
 ```
 
-## Usage
+## 🚀 Usage
 
 | Argument  | Type | Default     | Description                                                                      |
 |-----------|------|-------------|----------------------------------------------------------------------------------|
@@ -49,34 +63,56 @@ sudo pip install .
 
 ### Examples
 
-* To crawl a single URL up to a specified depth:
 ```bash
 moss "http://example.com"
 moss python moss.py https://example.com --format json --output ./results
 ```
+**Or**
 
-## Using Moss Crawler as a Module in Your Python Scripts
-
-You can also use the Moss Crawler functionality directly in your Python scripts.
-
-### Example:
 ```python
 from moss import Moss
-obg = Moss("http://example.com")
-response_list = obg.run()
+obj = Moss("http://example.com")
+response_list = obj.run()
 ```
 
-The `main` function will return a list of unique responses, classified by URL type.
+## 📁 Example Output
 
-### Function Arguments:
-* **urls**: str
-* **timeout**: int
-* **live**: bool
+```json
+[
+  {
+    "type": "Image",
+    "url": "https://example.com/assets/logo.png",
+    "status_code": 200,
+    "content_length": 5432,
+    "html": false
+  },
+  {
+    "type": "File",
+    "url": "https://example.com/files/report.pdf",
+    "status_code": 200,
+    "content_length": 1048576,
+    "html": false
+  },
+  {
+    "type": "Social",
+    "url": "https://twitter.com/example",
+    "status_code": 301,
+    "content_length": 0,
+    "html": false
+  },
+  "..."
+]
+```
+Or
+```csv
+Type,URL,Status Code,Content Length,HTML
+Image,https://example.com/assets/logo.png,200,5432,false
+File,https://example.com/files/report.pdf,200,1048576,false
+Social,https://twitter.com/example,301,0,<html><head>.... 
+"..."
+```
 
-## License
+---
+## 📝 License
 
 Moss is licensed under the MIT License. See the [LICENSE](https://github.com/hesamz3090/moss/blob/main/LICENSE) for more information.
-
-## Version
-
-**Current version is 2.0**

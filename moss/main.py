@@ -6,14 +6,13 @@ import os
 import warnings
 from bs4 import XMLParsedAsHTMLWarning
 import json
-from moss import Moss
+from .moss import Moss
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
 # Metadata constants
 NAME = 'Moss'
 VERSION = '2.0.0'
-AUTHOR = 'Hesam Aghajani'
 CONTACT = 'hesamz3090@gmail.com'
 URL = 'https://github.com/hesamz3090/moss'
 DESCRIPTIONS = 'A simple web crawler that classifies URLs and performs'
@@ -29,7 +28,6 @@ def banner():
     | |  | | |__| | |__| |____) |
     |_|  |_|\____/ \____/|_____/  v{VERSION}
 
-    Author : {AUTHOR}
     Contact: {CONTACT}
     Description: {DESCRIPTIONS}
     """)
@@ -48,6 +46,8 @@ def main():
                         help='Show live crawling output (default: enabled)')
     parser.add_argument('--format', choices=['csv', 'json'], default='csv',
                         help='Output format: csv or json (default: csv)')
+    parser.add_argument('--no_export', action='store_true', default=True,
+                        help='Show result only in terminal')
     parser.add_argument('--output', type=str, help='Output directory path (default: current folder)')
     parser.add_argument('-v', '--version', action='version', version=f'%(prog)s {VERSION}')
 
@@ -74,19 +74,20 @@ def main():
 
     os.makedirs(output_dir, exist_ok=True)
 
-    if args.format == 'csv':
-        csv_path = os.path.join(output_dir, base_name + '.csv')
-        with open(csv_path, mode='w', newline='', encoding='utf-8') as file:
-            writer = csv.DictWriter(file, fieldnames=['url', 'status_code', 'content_length', 'type'])
-            writer.writeheader()
-            for item in result:
-                writer.writerow({
-                    'url': item['url'],
-                    'status_code': item['status_code'],
-                    'content_length': item['content_length'],
-                    'type': item['type']
-                })
-        print(f"[✓] CSV saved to: {csv_path}")
+    if not args.no_export:
+        if args.format == 'csv':
+            csv_path = os.path.join(output_dir, base_name + '.csv')
+            with open(csv_path, mode='w', newline='', encoding='utf-8') as file:
+                writer = csv.DictWriter(file, fieldnames=['url', 'status_code', 'content_length', 'type'])
+                writer.writeheader()
+                for item in result:
+                    writer.writerow({
+                        'url': item['url'],
+                        'status_code': item['status_code'],
+                        'content_length': item['content_length'],
+                        'type': item['type']
+                    })
+            print(f"[✓] CSV saved to: {csv_path}")
 
     elif args.format == 'json':
         json_path = os.path.join(output_dir, base_name + '.json')

@@ -1,22 +1,18 @@
 from setuptools import setup, find_packages
-from main import NAME, AUTHOR, CONTACT, DESCRIPTIONS, VERSION, URL
-import os
-
 
 def read_requirements():
-    with open(os.path.join(os.path.dirname(__file__), 'requirements.txt')) as f:
+    with open('requirements.txt') as f:
         return f.read().splitlines()
 
-
 setup(
-    name=NAME.lower(),
-    version=VERSION,
-    author=AUTHOR,
-    author_email=CONTACT,
-    description=DESCRIPTIONS,
+    name='moss',
+    version='2.0.0',
+    author='Hesam Aghajani',
+    author_email='hesamz3090@gmail.com',
+    description='A simple web crawler that classifies URLs and performs',
     long_description=open('README.md', encoding='utf-8').read(),
     long_description_content_type='text/markdown',
-    url=URL,
+    url='https://github.com/hesamz3090/moss',
     packages=find_packages(),
     classifiers=[
         'Programming Language :: Python :: 3',
@@ -27,7 +23,7 @@ setup(
     install_requires=read_requirements(),
     entry_points={
         'console_scripts': [
-            'moss=main:main',
+            'moss=moss.main:main',
         ],
     },
 )

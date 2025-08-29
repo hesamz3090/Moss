@@ -48,19 +48,20 @@ pip install .
 
 ## 🚀 Usage
 
-| Argument        | Type      | Default     | Description                                                                      |
-|-----------------|-----------|-------------|----------------------------------------------------------------------------------|
-| url             | str       | Required    | The base URL to start crawling from. Must start with http:// or https://.        |
-| --timeout       | int       | 5           | Timeout in seconds for each HTTP request.                                        |
-| --max_depth     | int       | None        | limit crawling depth for a fast scan.                                            |
+| Argument    | Type      | Default     | Description                                                                      |
+|-------------|-----------|-------------|----------------------------------------------------------------------------------|
+| url         | str       | Required    | The base URL to start crawling from. Must start with http:// or https://.        |
+| --timeout   | int       | 5           | Timeout in seconds for each HTTP request.                                        |
+| --max_depth | int       | None        | limit crawling depth for a fast scan.                                            |
 |
-| --live          | flag      | True        | If enabled, prints real-time logs during crawling.                               |
+| --live      | flag      | True        | If enabled, prints real-time logs during crawling.                               |
+| --no_export | flag      | True        | If enabled, show result only in terminal.                                        |
 |
-| --format        | str       | csv         | Output format: either 'csv' or 'json'.                                           |
+| --format    | str       | csv         | Output format: either 'csv' or 'json'.                                           |
 |
-| --output        | str       | current dir | Directory path to save the output. If not provided, saves in the current folder. |
+| --output    | str       | current dir | Directory path to save the output. If not provided, saves in the current folder. |
 |
-| -v              | flag      | —           | Displays the current version of the tool.                                        |
+| -v          | flag      | —           | Displays the current version of the tool.                                        |
 |
 
 ### Examples
@@ -72,7 +73,7 @@ moss python moss.py https://example.com --format json --output ./results
 **Or**
 
 ```python
-from moss import Moss
+from moss.moss import Moss
 obj = Moss("http://example.com")
 response_list = obj.run()
 ```
